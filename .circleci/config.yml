@@ -1,0 +1,44 @@
+version: 2 # use CircleCI 2.0
+jobs: # A basic unit of work in a run
+  test: # runs not using Workflows must have a `build` job as entry point 
+    # directory where steps are run
+    working_directory: ~/APITesting
+    docker: # run the steps with Docker
+      # CircleCI Python images available at: https://hub.docker.com/r/circleci/python/
+      - image: circleci/python:3.7.1
+        environment: # environment variables for primary container
+    steps: # steps that comprise the `build` job
+      - checkout # check out source code to working directory
+      - restore_cache:
+      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          key: APITesting-{{ .Branch }}-{{ checksum "Pipfile.lock" }}
+      - run:
+          command: |
+            python -m unittest discover tests
+
+  deploy:
+    docker:
+      - image: buildpack-deps:trusty
+    working_directory: ~/APITesting
+    steps:
+      - checkout
+      - run:
+          name: setup git
+          command: |
+            git config user.email "<email>"
+            git config user.name "Deployment Bot"
+      - run:
+          name: Deploy Master to Heroku
+          command: |
+            ls -l
+            git status
+            git add index
+            git commit --allow-empty -m "readme.md deploy bot"
+            # Push quietly to prevent showing the token in log
+            git push --force https://heroku:$HEROKU_API_KEY@git.heroku.com/$HEROKU_APP_NAME.git master
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - test 
+      - readme        
